@@ -1,39 +1,54 @@
 // File: src/controls.ts
 
-/**
- * Centralized controls module. Tracks WASD, Space, Ctrl, and mount key (E).
- * Other modules read `controls` for movement flags and register a mount callback.
- */
+import { PointerLockControls as _PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import * as THREE from 'three';
 
-type ControlsState = {
-  forward: boolean;
-  backward: boolean;
-  left: boolean;
-  right: boolean;
-  sprint: boolean;
-  jump: boolean;
-  descend: boolean;
-};
-
-const controls: ControlsState = {
-  forward: false,
+// ———————————————————————————————————————————————————————————————————————————————————
+// 1) Create a single “controls” object whose boolean flags we’ll read in Hoverbike.update()
+// ———————————————————————————————————————————————————————————————————————————————————
+export const controls = {
+  forward:  false,
   backward: false,
-  left: false,
-  right: false,
-  sprint: false,
-  jump: false,
-  descend: false,
+  left:     false,
+  right:    false,
+  jump:     false,
+  descend:  false,
 };
 
-// Callback to invoke when the user presses “E”
-let mountCallback: (() => void) | null = null;
+// ———————————————————————————————————————————————————————————————————————————————————
+// 2) Create a real PointerLockControls instance for the Player’s camera.
+//    (You can import & use this in Player.ts to lock/unlock the camera.)
+// ———————————————————————————————————————————————————————————————————————————————————
+export const PointerLockControls = _PointerLockControls;
 
-/** Register a function to call on “E” key press */
-function registerMountCallback(cb: () => void) {
-  mountCallback = cb;
+// ———————————————————————————————————————————————————————————————————————————————————
+// 3) This array will hold all “mount” callbacks (called when user presses “E”).
+//    Hoverbike mounting logic lives in main.ts, but the keypress listener is here.
+// ———————————————————————————————————————————————————————————————————————————————————
+const mountCallbacks: Array<() => void> = [];
+export function registerMountCallback(fn: () => void) {
+  mountCallbacks.push(fn);
 }
 
-function onKeyDown(e: KeyboardEvent) {
+// ———————————————————————————————————————————————————————————————————————————————————
+// 4) Player‐movement toggles: if you want to disable the Player’s own WASD while on bike,
+//    you can call disablePlayer() / enablePlayer() (e.g. from Player.ts).
+// ———————————————————————————————————————————————————————————————————————————————————
+let playerMovementEnabled = true;
+export function disablePlayer() {
+  playerMovementEnabled = false;
+}
+export function enablePlayer() {
+  playerMovementEnabled = true;
+}
+export function isPlayerMovementEnabled() {
+  return playerMovementEnabled;
+}
+
+// ———————————————————————————————————————————————————————————————————————————————————
+// 5) Listen for keydown/keyup to flip the above boolean flags + call mount callbacks on “E”.
+// ———————————————————————————————————————————————————————————————————————————————————
+document.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'KeyW':
       controls.forward = true;
@@ -47,10 +62,6 @@ function onKeyDown(e: KeyboardEvent) {
     case 'KeyD':
       controls.right = true;
       break;
-    case 'ShiftLeft':
-    case 'ShiftRight':
-      controls.sprint = true;
-      break;
     case 'Space':
       controls.jump = true;
       break;
@@ -59,12 +70,13 @@ function onKeyDown(e: KeyboardEvent) {
       controls.descend = true;
       break;
     case 'KeyE':
-      if (mountCallback) mountCallback();
+      // “E” toggles mount/dismount
+      mountCallbacks.forEach((fn) => fn());
       break;
   }
-}
+});
 
-function onKeyUp(e: KeyboardEvent) {
+document.addEventListener('keyup', (e) => {
   switch (e.code) {
     case 'KeyW':
       controls.forward = false;
@@ -78,10 +90,6 @@ function onKeyUp(e: KeyboardEvent) {
     case 'KeyD':
       controls.right = false;
       break;
-    case 'ShiftLeft':
-    case 'ShiftRight':
-      controls.sprint = false;
-      break;
     case 'Space':
       controls.jump = false;
       break;
@@ -90,10 +98,4 @@ function onKeyUp(e: KeyboardEvent) {
       controls.descend = false;
       break;
   }
-}
-
-window.addEventListener('keydown', onKeyDown);
-window.addEventListener('keyup', onKeyUp);
-
-export { controls, registerMountCallback };
-export type { ControlsState };
+});

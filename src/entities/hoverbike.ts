@@ -1,4 +1,4 @@
-// File: src/entities/Hoverbike.ts
+// File: src/entities/hoverbike.ts
 
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
@@ -11,8 +11,18 @@ import type { PointerLockControls } from 'three/examples/jsm/controls/PointerLoc
 import MODEL_URL from '/src/assets/hoverbike.glb?url';
 
 type HoverbikeOptions = {
-  x?: number;
-  z?: number;
+  scene: THREE.Scene;
+  world: CANNON.World;
+  controls: {
+    forward: boolean;
+    backward: boolean;
+    left: boolean;
+    right: boolean;
+    jump: boolean;
+    descend: boolean;
+  };
+  spawnX?: number;
+  spawnZ?: number;
   baseHeight?: number;
   hoverSpeed?: number;
   hoverAmplitude?: number;
@@ -20,7 +30,9 @@ type HoverbikeOptions = {
 };
 
 export class Hoverbike {
-  public object3d: THREE.Object3D = new THREE.Group();
+  public parent: THREE.Group = new THREE.Group();
+  public object3d: THREE.Object3D = this.parent;
+
   private gltfLoader = new GLTFLoader();
   private meshReady = false;
 
@@ -28,12 +40,15 @@ export class Hoverbike {
   private elapsed = 0;
 
   private opts: Required<HoverbikeOptions> = {
-    x: 5,                // keeps it away from player’s spawn
-    z: 0,
-    baseHeight: 2,
+    scene:      scene,      // will be overridden by constructor
+    world:      world,      // will be overridden by constructor
+    controls:   controls,   // will be overridden by constructor
+    spawnX:     5,
+    spawnZ:     0,
+    baseHeight: 0.8,
     hoverSpeed: 1.5,
     hoverAmplitude: 0.4,
-    scale: 0.015,        // 1.5% of original
+    scale:      0.005,
   };
 
   public isMounted = false;
@@ -41,14 +56,25 @@ export class Hoverbike {
   private playerObjectOriginalPosition: THREE.Vector3 | null = null;
   private controlsObject: PointerLockControls | null = null;
 
-  constructor(options?: HoverbikeOptions) {
-    if (options) this.opts = { ...this.opts, ...options };
+  constructor(options: HoverbikeOptions) {
+    // Merge passed‐in options with defaults
+    this.opts = {
+      ...this.opts,
+      ...options,
+    };
 
+    // 1) Create a parent group and add it to the scene
+    this.parent = new THREE.Group();
+    this.object3d = this.parent;
+    this.opts.scene.add(this.parent);
+
+    // 2) Load the GLTF model
     this.gltfLoader.load(
       MODEL_URL,
       (gltf) => {
-        this.object3d = gltf.scene;
-        this.object3d.traverse((child) => {
+        const rawModel = gltf.scene;
+
+        rawModel.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
             mesh.castShadow = true;
@@ -56,35 +82,33 @@ export class Hoverbike {
           }
         });
 
-        // ─── Scale = 1.5% of original ───────────────────────────────────────
-        this.object3d.scale.set(
+        const wrapper = new THREE.Group();
+        wrapper.add(rawModel);
+
+        // 2a) Scale down to 0.5%
+        wrapper.scale.set(
           this.opts.scale,
           this.opts.scale,
           this.opts.scale
         );
 
-        // ─── Rotate model so it sits upright (fix left‐side down) ──────────
-        // First: convert Z-up → Y-up
-        this.object3d.rotation.x = -Math.PI / 2;
-        // Then: roll it 90° so its left side is no longer down
-        this.object3d.rotation.z = -Math.PI / 2;
-        // Leave rotation.y = 0 for now; bike faces +Z by default
+        // 2b) **Rotate so the bike is fully upright**:
+        //     • rotation.x = –90° (–π/2) to convert “Z-up” → Three.js’s “Y-up”
+        //     • rotation.y = 0   (no yaw)
+        //     • rotation.z = 0   (no roll)
+        wrapper.rotation.set(-Math.PI / 2, 0, 0);
 
-        // ─── Place it at (5, 0, 0); Y will be set in update() ─────────────
-        this.object3d.position.set(this.opts.x, 0, this.opts.z);
+        // 2c) Place wrapper at (spawnX, 0, spawnZ). Y will be driven by physics.
+        wrapper.position.set(
+          this.opts.spawnX,
+          0,
+          this.opts.spawnZ
+        );
 
-        scene.add(this.object3d);
+        this.parent.add(wrapper);
 
-        // ─── Create simple cylinder collider ────────────────────────────────
-        const cylRadius = 0.5 * this.opts.scale;
-        const cylHeight = 2 * this.opts.scale;
-        const shape = new CANNON.Cylinder(cylRadius, cylRadius, cylHeight, 12);
-        const body = new CANNON.Body({ mass: 1 });
-        body.addShape(shape);
-        body.position.set(this.opts.x, this.opts.baseHeight, this.opts.z);
-        world.addBody(body);
-        this.body = body;
-
+        // 3) Initialize physics body
+        this._initPhysicsBody();
         this.meshReady = true;
       },
       (xhr) => {
@@ -96,34 +120,52 @@ export class Hoverbike {
     );
   }
 
-  /**
-   * Mount: parent PointerLockControls.getObject() under the bike,
-   * move camera up + behind, and disable player movement (pointer-lock stays).
-   */
+  private _initPhysicsBody() {
+    // Use a simple cylinder shape for collisions
+    const r = 0.5 * this.opts.scale;
+    const h = 2 * this.opts.scale;
+    const cylShape = new CANNON.Cylinder(r, r, h, 12);
+
+    // Initially STATIC (mass = 0), at (spawnX, baseHeight, spawnZ)
+    this.body = new CANNON.Body({
+      mass: 0,
+      position: new CANNON.Vec3(
+        this.opts.spawnX,
+        this.opts.baseHeight,
+        this.opts.spawnZ
+      ),
+    });
+    this.body.addShape(cylShape);
+    this.opts.world.addBody(this.body);
+  }
+
   public mount(
     controlsObject: PointerLockControls,
     playerControlsDisable: () => void
   ) {
     if (!this.meshReady || this.isMounted || !this.body) return;
+    this.isMounted = true;
 
-    this.controlsObject = controlsObject;
     this.cameraOriginalParent = controlsObject.getObject().parent!;
-    this.playerObjectOriginalPosition = controlsObject.getObject().position.clone();
+    this.playerObjectOriginalPosition = controlsObject
+      .getObject()
+      .position.clone();
 
-    // Reparent the whole controls‐pivot under the bike:
-    this.object3d.add(controlsObject.getObject());
-    // Lift camera up + a bit behind so you’re not staring at the bottom:
+    this.parent.add(controlsObject.getObject());
     controlsObject.getObject().position.set(0, 1.0, -0.5);
-    controlsObject.getObject().lookAt(this.object3d.position);
+    controlsObject.getObject().lookAt(this.parent.position);
+
+    // Make physics body dynamic so it can move and hover
+    this.body.mass = 50;
+    this.body.type = CANNON.Body.DYNAMIC;
+    this.body.updateMassProperties();
+    this.body.wakeUp();
+    this.body.velocity.set(0, 0, 0);
+    this.body.angularVelocity.set(0, 0, 0);
 
     playerControlsDisable();
-    this.isMounted = true;
   }
 
-  /**
-   * Dismount: reattach controls pivot to its original parent & position,
-   * then re-enable player movement (pointer-lock remains).
-   */
   public dismount(
     controlsObject: PointerLockControls,
     playerControlsEnable: () => void
@@ -136,9 +178,17 @@ export class Hoverbike {
     )
       return;
 
-    this.object3d.remove(controlsObject.getObject());
+    this.parent.remove(controlsObject.getObject());
     this.cameraOriginalParent.add(controlsObject.getObject());
     controlsObject.getObject().position.copy(this.playerObjectOriginalPosition);
+
+    // Freeze the bike (back to static)
+    this.body.velocity.set(0, 0, 0);
+    this.body.angularVelocity.set(0, 0, 0);
+    this.body.type = CANNON.Body.STATIC;
+    this.body.mass = 0;
+    this.body.updateMassProperties();
+    this.body.position.y = this.opts.baseHeight;
 
     playerControlsEnable();
     this.isMounted = false;
@@ -148,28 +198,22 @@ export class Hoverbike {
   public update(deltaTime: number) {
     if (!this.meshReady || !this.body) return;
 
-    // ─── Hover bob (sine wave) ───────────────────────────────────────────────
-    this.elapsed += deltaTime;
-    const hoverY =
-      Math.sin(this.elapsed * this.opts.hoverSpeed) * this.opts.hoverAmplitude;
+    if (this.isMounted) {
+      // 1) Hover (sine‐wave bob) + extra for jump/descend
+      this.elapsed += deltaTime;
+      const bob =
+        Math.sin(this.elapsed * this.opts.hoverSpeed) *
+        this.opts.hoverAmplitude;
 
-    // Only apply Space/Ctrl vertical offsets when mounted
-    const extraY =
-      this.isMounted && controls.jump
+      const extraY = this.opts.controls.jump
         ? 0.1
-        : this.isMounted && controls.descend
+        : this.opts.controls.descend
         ? -0.1
         : 0;
+      this.body.position.y = this.opts.baseHeight + bob + extraY;
 
-    const targetY = this.opts.baseHeight + hoverY + extraY;
-    this.body.position.y = targetY;
-
-    // ─── Drive when Mounted ────────────────────────────────────────────────
-    if (this.isMounted && this.controlsObject) {
-      // Extract yaw from the camera pivot
-      const yaw = this.controlsObject.getObject().rotation.y;
-
-      // Build bike‐local forward (−Z) + right (+X) in world
+      // 2) Driving via WASD (in camera’s forward direction)
+      const yaw = (this.cameraOriginalParent as THREE.Object3D).rotation.y;
       const forwardVec = new THREE.Vector3(0, 0, -1)
         .applyEuler(new THREE.Euler(0, yaw, 0))
         .normalize();
@@ -177,30 +221,43 @@ export class Hoverbike {
         .applyEuler(new THREE.Euler(0, yaw, 0))
         .normalize();
 
-      let move = new THREE.Vector3();
-      if (controls.forward) move.add(forwardVec);
-      if (controls.backward) move.sub(forwardVec);
-      if (controls.right) move.add(rightVec);
-      if (controls.left) move.sub(rightVec);
+      const moveVec = new THREE.Vector3();
+      if (this.opts.controls.forward) moveVec.add(forwardVec);
+      if (this.opts.controls.backward) moveVec.sub(forwardVec);
+      if (this.opts.controls.right) moveVec.add(rightVec);
+      if (this.opts.controls.left) moveVec.sub(rightVec);
 
-      if (move.lengthSq() > 0) {
-        move.normalize();
+      if (moveVec.lengthSq() > 0) {
+        moveVec.normalize();
         const speed = 5;
-        const deltaMove = move.multiplyScalar(speed * deltaTime);
-        this.body.position.x += deltaMove.x;
-        this.body.position.z += deltaMove.z;
+        const dist = speed * deltaTime;
+        this.body.position.x += moveVec.x * dist;
+        this.body.position.z += moveVec.z * dist;
 
-        // Rotate bike to face the movement direction
-        const targetPos = this.object3d.position.clone().add(move);
-        this.object3d.lookAt(targetPos);
+        // Rotate bike so its “nose” faces movement direction
+        const target = new THREE.Vector3(
+          this.body.position.x + moveVec.x,
+          this.body.position.y,
+          this.body.position.z + moveVec.z
+        );
+        this.parent.lookAt(target);
       }
+    } else {
+      // If unmounted, lock Y to baseHeight (no bobbing)
+      this.body.position.y = this.opts.baseHeight;
     }
 
-    // ─── Sync Mesh to Body ────────────────────────────────────────────────
-    this.object3d.position.set(
+    // 3) Sync Three.js mesh to physics body
+    this.parent.position.set(
       this.body.position.x,
       this.body.position.y,
       this.body.position.z
+    );
+    this.parent.quaternion.set(
+      this.body.quaternion.x,
+      this.body.quaternion.y,
+      this.body.quaternion.z,
+      this.body.quaternion.w
     );
   }
 }

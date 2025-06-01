@@ -1,5 +1,3 @@
-// File: src/main.ts
-
 import * as THREE from 'three';
 import { scene, camera, renderer } from './scene';
 import { world } from './physics';
@@ -60,12 +58,22 @@ for (let z = halfSize - step; z > -halfSize; z -= step) {
 positions.forEach(([x, z]) => loadTreeAt(x, z));
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Create a single Hoverbike (defaults inside Hoverbike.ts)
+// Create a single Hoverbike (all orientation/scale now in hoverbike.ts)
 // ───────────────────────────────────────────────────────────────────────────────
-const hoverbike = new Hoverbike();
+const hoverbike = new Hoverbike({
+  scene,
+  world,
+  controls,
+  spawnX: 5,
+  spawnZ: 0,
+  baseHeight: .8,
+  hoverSpeed: 1.5,
+  hoverAmplitude: 0.4,
+  scale: 0.005,
+});
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Centralized Mount/Dismount Handler (moved into controls.ts logic)
+// Centralized Mount/Dismount Handler (moved into controls.ts)
 // ───────────────────────────────────────────────────────────────────────────────
 registerMountCallback(() => {
   const bikePos = hoverbike.object3d.position;
