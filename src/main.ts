@@ -15,7 +15,7 @@ import { InventoryUI } from './ui/InventoryUI';
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Import Admin Build Menu functions
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-import { animateBuildMenu, loadSavedPlacements } from './adminBuildMenu';
+import { animateBuildMenu, loadSavedPlacements, show as showBuildMenu, hide as hideBuildMenu, onMouseDown } from './adminBuildMenu';
 
 // ✅ Use shared inventory instance from scene.ts
 const inventoryUI = new InventoryUI(inventory);
@@ -39,10 +39,11 @@ const player = new Player(camera, scene);
 const blocker = document.getElementById('blocker')!;
 const instructions = document.getElementById('instructions')!;
 
-// Track whether we've already clicked “Play” so the overlay won’t reappear
+// Track whether we've clicked “Play” so the overlay never reopens
 let hasClickedPlay = false;
 
 instructions.addEventListener('click', () => {
+  // The only place we request pointer lock
   player.controls.lock();
   hasClickedPlay = true;
 });
@@ -50,14 +51,14 @@ instructions.addEventListener('click', () => {
   blocker.style.display = 'none';
 });
 ;(player.controls as any).addEventListener('unlock', () => {
-  // Only show blocker on first load (if never clicked “Play” yet)
+  // Only show blocker if user never clicked Play yet
   if (!hasClickedPlay) {
     blocker.style.display = 'flex';
   }
 });
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Place trees around the 100×100 border
+// Place trees around the 100×100 border (as before)
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const step = 20;
 const halfSize = 50;
@@ -107,7 +108,7 @@ registerMountCallback(() => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Stats.js & dat.GUI
+// Stats.js & dat.GUI (as before)
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const stats = new Stats();
 stats.showPanel(0);
@@ -134,13 +135,29 @@ gui
 loadSavedPlacements();
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Listen for '\' to toggle build mode
+// Listen for Tab to toggle build mode (no pointer-lock calls here)
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 window.addEventListener('keydown', (e) => {
-  if (e.key === "\\") {
-    const newMode = !isBuildModeEnabled();
-    setBuildMode(newMode);
-    // No changes to blocker here—build mode does not show the “Click to Play” overlay
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const nowBuild = !isBuildModeEnabled();
+    setBuildMode(nowBuild);
+
+    if (nowBuild) {
+      showBuildMenu();           // pointer-lock is still active here
+    } else {
+      hideBuildMenu();
+      player.controls.lock();    // re-lock pointer because Tab was a user gesture
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// On left‐mouse down: place asset if build menu is active
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+window.addEventListener('mousedown', (event) => {
+  if (event.button === 0) {
+    onMouseDown();
   }
 });
 
@@ -153,16 +170,15 @@ function animate() {
   stats.begin();
   world.fixedStep();
 
-  // Update player & hoverbike each frame
+  // 1) Update player & hoverbike each frame
   player.update(clock.getDelta());
   hoverbike.update(clock.getDelta());
 
-  // Update Build Menu ghost preview (if in build mode)
+  // 2) Update Build Menu ghost preview (if in build mode)
   animateBuildMenu();
 
-  // Render the scene
+  // 3) Render the scene
   renderer.render(scene, camera);
-
   stats.end();
   requestAnimationFrame(animate);
 }

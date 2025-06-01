@@ -2,16 +2,16 @@
 
 import { PointerLockControls as _PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import * as THREE from 'three';
-import { inventory } from './scene'; // ✅ Import inventory system
+import { inventory } from './scene'; // ✅ Import inventory for KeyR clearing
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Add a flag to disable movement when in build mode
+// Build Mode Flag (just track if menu is open; does NOT disable movement)
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 let buildModeEnabled = false;
 export function setBuildMode(enabled: boolean) {
   buildModeEnabled = enabled;
 }
-export function isBuildModeEnabled() {
+export function isBuildModeEnabled(): boolean {
   return buildModeEnabled;
 }
 
@@ -29,12 +29,12 @@ export const controls = {
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // 2) Create a real PointerLockControls instance for the Player’s camera.
-//    (You can import & use this in Player.ts to lock/unlock the camera.)
+//    Use this in Player.ts to lock/unlock the camera.
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export const PointerLockControls = _PointerLockControls;
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// 3) This array will hold all “mount” callbacks (called when user presses “E”). Hoverbike mounting logic lives in main.ts, but the keypress listener is here.
+// 3) This array will hold all “mount” callbacks (called when user presses “E”). Hoverbike mounting logic lives in main.ts.
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const mountCallbacks: Array<() => void> = [];
 export function registerMountCallback(fn: () => void) {
@@ -42,7 +42,7 @@ export function registerMountCallback(fn: () => void) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// 4) Player‐movement toggles: if you want to disable the Player’s own WASD while on bike, you can call disablePlayer() / enablePlayer() (e.g. from Player.ts).
+// 4) Player‐movement toggles: if you want to disable the Player’s own WASD while on bike, use disablePlayer() / enablePlayer().
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 let playerMovementEnabled = true;
 export function disablePlayer() {
@@ -56,12 +56,10 @@ export function isPlayerMovementEnabled() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// 5) Listen for keydown/keyup to flip the above boolean flags + call mount callbacks on “E”.
-//    Skip all movement if build mode is enabled.
+// 5) Listen for keydown/keyup to flip the above boolean flags + call mount callbacks on “E” + clear inventory on “R”.
+//    We do NOT short‐circuit when buildModeEnabled is true, so movement always works.
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  if (buildModeEnabled) return; // Disable movement while in build mode
-
   switch (e.code) {
     case 'KeyW':
       controls.forward = true;
@@ -94,8 +92,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keyup', (e) => {
-  if (buildModeEnabled) return; // Disable movement while in build mode
-
   switch (e.code) {
     case 'KeyW':
       controls.forward = false;
