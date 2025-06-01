@@ -1,3 +1,4 @@
+// File: src/ui/InventoryUI.ts
 import { InventorySystem } from "../systems/InventorySystem";
 
 export class InventoryUI {
@@ -7,7 +8,7 @@ export class InventoryUI {
     this.container = document.createElement("div");
     this.container.id = "inventory-ui";
 
-    // Container Styles
+    // Styling
     this.container.style.position = "absolute";
     this.container.style.top = "200px";
     this.container.style.right = "590px";
@@ -22,13 +23,13 @@ export class InventoryUI {
 
     document.body.appendChild(this.container);
 
-    // ✅ Listen for inventory changes
+    // ✅ Always update UI when inventory changes
     this.inventory.addEventListener("changed", () => {
-      console.log("[InventoryUI] Received 'changed' event");
+      console.log("[InventoryUI] Event received: changed");
       this.update();
     });
 
-    // Toggle Inventory with "I"
+    // Toggle UI with "I"
     window.addEventListener("keydown", (e) => {
       if (e.key.toLowerCase() === "i") {
         this.toggle();
@@ -38,6 +39,7 @@ export class InventoryUI {
 
   update() {
     const items = this.inventory.getItems();
+    console.log("[InventoryUI] Rendering items:", items);
 
     this.container.innerHTML = `
       <h3 style="text-align: center; margin: 0 0 8px 0;">Inventory</h3>
@@ -49,15 +51,11 @@ export class InventoryUI {
         }
       </ul>
     `;
-
-    console.log("[InventoryUI] update() called. Current inventory:");
-    console.table(items);
-    console.log("[InventoryUI] container.innerHTML =", this.container.innerHTML);
   }
 
   toggle() {
     const visible = this.container.style.display === "block";
-    if (!visible) this.update();
     this.container.style.display = visible ? "none" : "block";
+    if (!visible) this.update();
   }
 }

@@ -2,6 +2,7 @@
 
 import { PointerLockControls as _PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import * as THREE from 'three';
+import { inventory } from './scene'; // ✅ Import inventory system
 
 // ———————————————————————————————————————————————————————————————————————————————————
 // 1) Create a single “controls” object whose boolean flags we’ll read in Hoverbike.update()
@@ -72,6 +73,10 @@ document.addEventListener('keydown', (e) => {
     case 'KeyE':
       // “E” toggles mount/dismount
       mountCallbacks.forEach((fn) => fn());
+      break;
+    case 'KeyR':
+      // “R” clears the inventory
+      inventory.clear();
       break;
   }
 });

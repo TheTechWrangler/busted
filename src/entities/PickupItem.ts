@@ -1,4 +1,4 @@
-// File: src/entities/PickupItem.ts
+// src/entities/PickupItem.ts
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { InventoryItem } from '../types/InventoryItems';
@@ -31,18 +31,12 @@ export class PickupItem {
     world.addBody(this.body);
   }
 
-  /**
-   * Call every frame to animate visuals, etc.
-   */
   update() {
     if (this.collected) return;
     this.mesh.rotation.y += 0.01;
     this.mesh.position.y = this.body.position.y + Math.sin(Date.now() * 0.005) * 0.05;
   }
 
-  /**
-   * Call from scene/player to test distance and pick up when “E” is pressed
-   */
   tryCollect(playerPosition: THREE.Vector3) {
     if (this.collected) return;
 
@@ -59,7 +53,6 @@ export class PickupItem {
     this.mesh.visible = false;
     this.body.collisionResponse = false;
     this.body.type = CANNON.Body.STATIC;
-    console.log("[PickupItem] Collecting item:", this.itemData);
     this.inventory.addItem({ ...this.itemData });
   }
 }

@@ -1,11 +1,8 @@
-// File: src/scene.ts
-
 import * as THREE from 'three';
 import { PickupItem } from './entities/PickupItem';
 import { InventorySystem } from './systems/InventorySystem';
 import { InventoryItem } from './types/InventoryItems';
-import { InventoryUI } from './ui/InventoryUI'; // ✅ Added
-import { world } from './physics'; // ✅ Make sure your Cannon world is initialized here
+import { world } from './physics';
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xaaaaaa);
@@ -23,14 +20,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// Handle window resize
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Hemispheric and directional lights
+// Lights
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
 hemiLight.position.set(0, 50, 0);
 scene.add(hemiLight);
@@ -45,12 +41,10 @@ dirLight.shadow.camera.right = 10;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
 
-// ————————————————————————————————————————————————————————————————
+// ———————————————————————
 // ✅ Inventory + Pickups Setup
-// ————————————————————————————————————————————————————————————————
+// ———————————————————————
 export const inventory = new InventorySystem();
-new InventoryUI(inventory); // ✅ Added: Hook up Inventory UI
-
 const pickups: PickupItem[] = [];
 
 const potion: InventoryItem = {
@@ -70,18 +64,11 @@ const item = new PickupItem(
 
 pickups.push(item);
 
-// ————————————————————————————————————————————————————————————————
-// ✅ E Key to Pick Up Nearby Items
-// ————————————————————————————————————————————————————————————————
+// ———————————————————————
+// ✅ “E” Key to Collect Nearby
+// ———————————————————————
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') {
-    pickups.forEach(p => {
-      p.tryCollect(camera.position);
-    });
+    pickups.forEach(p => p.tryCollect(camera.position));
   }
 });
-
-// ————————————————————————————————————————————————————————————————
-// ✅ Call this inside your game/render loop elsewhere:
-// pickups.forEach(p => p.update());
-// ————————————————————————————————————————————————————————————————

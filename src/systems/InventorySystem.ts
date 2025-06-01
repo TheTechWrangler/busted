@@ -1,42 +1,55 @@
+// src/systems/InventorySystem.ts
 import { InventoryItem } from "../types/InventoryItems";
-import { EventDispatcher } from 'three';
+import { EventDispatcher } from "three";
 
 interface InventoryEvents {
-  changed: { type: 'changed' };
+  changed: { type: "changed" };
 }
 
 export class InventorySystem extends EventDispatcher<InventoryEvents> {
   private items: InventoryItem[] = [];
 
+  constructor() {
+    super();
+    console.log("[InventorySystem] constructor called.");
+  }
+
   addItem(item: InventoryItem) {
-    const existing = this.items.find(i => i.id === item.id);
+    console.log("[InventorySystem] addItem called with:", item);
+    console.trace("[InventorySystem] stack trace for addItem");
+
+    const existing = this.items.find((i) => i.id === item.id);
     if (existing) {
       existing.quantity += item.quantity;
     } else {
       this.items.push({ ...item });
     }
-    console.log("[InventorySystem] addItem:", item);
-    console.log("[InventorySystem] current items:", this.items);
-    this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
+
+    console.log("[InventorySystem] items after add:", this.items);
+    this.dispatchEvent({ type: "changed" });
   }
 
   removeItem(id: string, amount = 1) {
-    const item = this.items.find(i => i.id === id);
+    console.log(`[InventorySystem] removeItem('${id}', ${amount})`);
+    const item = this.items.find((i) => i.id === id);
     if (item) {
       item.quantity -= amount;
       if (item.quantity <= 0) {
-        this.items = this.items.filter(i => i.id !== id);
+        this.items = this.items.filter((i) => i.id !== id);
       }
-      this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
+      this.dispatchEvent({ type: "changed" });
     }
   }
 
   getItems() {
+    console.log("[InventorySystem] getItems() called, returning:", this.items);
+    console.trace("[InventorySystem] stack trace for getItems");
     return this.items;
   }
 
   clear() {
+    console.log("[InventorySystem] clear() called");
     this.items = [];
-    this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
+    this.dispatchEvent({ type: "changed" });
   }
 }
