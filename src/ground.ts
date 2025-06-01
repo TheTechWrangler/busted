@@ -16,13 +16,22 @@ const grassTexture = texLoader.load(grassTextureUrl, (tex) => {
 });
 
 const groundGeom = new THREE.PlaneGeometry(100, 100);
+
+// Use a Lambert (or Standard) material—no transparency needed since grass.jpg is opaque
 const groundMat = new THREE.MeshLambertMaterial({ map: grassTexture });
+
 export const groundMesh = new THREE.Mesh(groundGeom, groundMat);
+
+// Rotate to lie flat
 groundMesh.rotation.x = -Math.PI / 2;
+
+// *** Lift the grass just above y=0 to avoid z-fighting ***
+groundMesh.position.y = 0.01;
+
 groundMesh.receiveShadow = true;
 scene.add(groundMesh);
 
-// Create a static Cannon-es plane for collision
+// Create a static Cannon-es plane for collision at y=0
 export const groundBody = new CANNON.Body({
   mass: 0,
   shape: new CANNON.Plane(),

@@ -31,6 +31,36 @@
     canvas {
       display: block;
     }
+
+    /* ─────────────────────────────────────────────────────────────────────────────
+        Admin Build Menu container
+       ───────────────────────────────────────────────────────────────────────────── */
+    #buildMenu {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px;
+      display: none;       /* Hidden until '\' is pressed */
+      z-index: 1000;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-family: sans-serif;
+    }
+    #buildMenu button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: #333;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    #buildMenu button:hover {
+      background: #555;
+    }
+    /* ───────────────────────────────────────────────────────────────────────────── */
   </style>
 </head>
 <body>
@@ -40,6 +70,10 @@
       (WASD to move, Mouse to look, Scroll to zoom, ESC to unlock)
     </div>
   </div>
+
+  <!-- Admin Build Menu: populated by adminBuildMenu.ts -->
+  <div id="buildMenu"></div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
