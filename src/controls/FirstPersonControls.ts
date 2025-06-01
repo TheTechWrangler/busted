@@ -14,7 +14,13 @@ declare global {
   }
 }
 
-export class FirstPersonControls extends EventDispatcher {
+interface FirstPersonControlsEventMap {
+  lock: Event;
+  unlock: Event;
+}
+
+export class FirstPersonControls extends EventDispatcher<FirstPersonControlsEventMap> {
+
   private camera: PerspectiveCamera;
   public enabled = false;
   private yawObject: Object3D;

@@ -8,6 +8,14 @@ import { Player } from './entities/Player';
 import { GUI } from 'dat.gui';
 import Stats from 'stats.js';
 import { controls, registerMountCallback } from './controls';
+import { InventorySystem } from "./systems/InventorySystem";
+import { InventoryUI } from "./ui/InventoryUI";
+
+const inventory = new InventorySystem();
+const inventoryUI = new InventoryUI(inventory);
+
+// Optional: Add test item to start with
+inventory.addItem({ id: "potion", name: "Health Potion", quantity: 1 });
 
 const MIN_FOV = 30;
 const MAX_FOV = 100;
