@@ -1,53 +1,89 @@
-import { PerspectiveCamera, Scene } from 'three';
-import * as CANNON from 'cannon-es';
-import { FirstPersonControls } from '../controls/FirstPersonControls';
-import CannonDebugger from 'cannon-es-debugger';
+// File: src/entities/Player.ts
+
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { controls } from '../controls';
 
 export class Player {
-  public body: CANNON.Body;
-  public controls: FirstPersonControls;
-  private debugMesh: any = null;
+  public controls: PointerLockControls;
+  private enabled = false;
+
+  private velocityY = 0;
+  private gravity = 9.8;
+  private onGround = true;
 
   constructor(
-    private camera: PerspectiveCamera,
-    private world: CANNON.World,
-    private scene: Scene
+    private camera: THREE.PerspectiveCamera,
+    scene: THREE.Scene
   ) {
-    // Create physics body (sphere)
-    const radius = 1.0;
-    const sphereShape = new CANNON.Sphere(radius);
-    this.body = new CANNON.Body({
-      mass: 1,
-      shape: sphereShape,
-      fixedRotation: true
+    this.controls = new PointerLockControls(camera, document.body);
+
+    this.controls.addEventListener('lock', () => {
+      this.enabled = true;
     });
-    this.body.position.set(0, radius * 3, 10);
-    this.body.linearDamping = 0.3;
-    this.world.addBody(this.body);
+    this.controls.addEventListener('unlock', () => {
+      this.enabled = false;
+    });
 
-    // Setup controls
-    this.controls = new FirstPersonControls(this.camera);
-    this.controls.getObject().position.set(0, radius * 3, 10);
-    this.scene.add(this.controls.getObject());
+    // Start camera ~1.6 units above ground
+    this.controls.getObject().position.set(0, 1.6, 0);
+    scene.add(this.controls.getObject());
   }
 
-  public update(delta: number) {
-    this.controls.update(delta, this.body);
-    if (this.debugMesh) {
-      (this.debugMesh as any).update();
+  public update(deltaTime: number) {
+    if (!this.enabled) return;
+
+    // Jump
+    if (controls.jump && this.onGround) {
+      this.velocityY = 5;
+      this.onGround = false;
+    }
+
+    // Gravity
+    if (!this.onGround) {
+      this.velocityY -= this.gravity * deltaTime;
+      const newY = this.controls.getObject().position.y + this.velocityY * deltaTime;
+      if (newY <= 1.6) {
+        this.controls.getObject().position.y = 1.6;
+        this.velocityY = 0;
+        this.onGround = true;
+      } else {
+        this.controls.getObject().position.y = newY;
+      }
+    }
+
+    // Camera‐relative movement
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+    direction.y = 0;
+    direction.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+
+    let move = new THREE.Vector3();
+    if (controls.forward) move.add(direction);
+    if (controls.backward) move.sub(direction);
+    if (controls.right) move.add(right);
+    if (controls.left) move.sub(right);
+
+    if (move.lengthSq() > 0) {
+      move.normalize();
+      const speed = 5;
+      const deltaMove = move.multiplyScalar(speed * deltaTime);
+      this.controls.getObject().position.add(deltaMove);
     }
   }
 
-  public setPhysicsDebug(enable: boolean, scene: Scene) {
-    if (enable && !this.debugMesh) {
-      this.debugMesh = new CannonDebugger(scene, this.world, {
-        color: 0x00ff00,
-        scale: 1.0,
-      });
-    }
-    if (!enable && this.debugMesh) {
-      scene.remove(this.debugMesh.getMeshes());
-      this.debugMesh = null;
-    }
+  public disableControls() {
+    this.enabled = false;
+  }
+
+  public enableControls() {
+    this.enabled = true;
+  }
+
+  public setPhysicsDebug(_show: boolean, _scene: THREE.Scene) {
+    // no-op
   }
 }

@@ -32,8 +32,8 @@ export function loadTreeAt(x: number, z: number) {
           // Flip the model upright: convert Z-up → Y-up
           object.rotation.x = -Math.PI / 2;
 
-          // Scale the tree to 12% of its original size
-          object.scale.set(0.12, 0.12, 0.12);
+          // Scale the tree to 6% of its original size
+          object.scale.set(0.06, 0.06, 0.06);
 
           // Enable shadows on each mesh
           object.traverse((child) => {
@@ -57,8 +57,8 @@ export function loadTreeAt(x: number, z: number) {
           scene.add(object);
 
           // Optional: add a simple cylinder collider for the trunk
-          const trunkRadius = 0.5 * 0.12;
-          const trunkHeight = 5 * 0.5 * 0.12;
+          const trunkRadius = 0.5 * 0.06;
+          const trunkHeight = 5 * 0.5 * 0.06;
           const trunkShape = new CANNON.Cylinder(
             trunkRadius,
             trunkRadius,
