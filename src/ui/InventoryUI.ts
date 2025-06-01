@@ -1,4 +1,3 @@
-// src/ui/InventoryUI.ts
 import { InventorySystem } from "../systems/InventorySystem";
 
 export class InventoryUI {
@@ -23,6 +22,12 @@ export class InventoryUI {
 
     document.body.appendChild(this.container);
 
+    // ✅ Listen for inventory changes
+    this.inventory.addEventListener("changed", () => {
+      console.log("[InventoryUI] Received 'changed' event");
+      this.update();
+    });
+
     // Toggle Inventory with "I"
     window.addEventListener("keydown", (e) => {
       if (e.key.toLowerCase() === "i") {
@@ -44,6 +49,10 @@ export class InventoryUI {
         }
       </ul>
     `;
+
+    console.log("[InventoryUI] update() called. Current inventory:");
+    console.table(items);
+    console.log("[InventoryUI] container.innerHTML =", this.container.innerHTML);
   }
 
   toggle() {

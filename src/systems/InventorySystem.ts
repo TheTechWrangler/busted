@@ -1,7 +1,11 @@
-// src/systems/InventorySystem.ts
 import { InventoryItem } from "../types/InventoryItems";
+import { EventDispatcher } from 'three';
 
-export class InventorySystem {
+interface InventoryEvents {
+  changed: { type: 'changed' };
+}
+
+export class InventorySystem extends EventDispatcher<InventoryEvents> {
   private items: InventoryItem[] = [];
 
   addItem(item: InventoryItem) {
@@ -11,6 +15,9 @@ export class InventorySystem {
     } else {
       this.items.push({ ...item });
     }
+    console.log("[InventorySystem] addItem:", item);
+    console.log("[InventorySystem] current items:", this.items);
+    this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
   }
 
   removeItem(id: string, amount = 1) {
@@ -20,6 +27,7 @@ export class InventorySystem {
       if (item.quantity <= 0) {
         this.items = this.items.filter(i => i.id !== id);
       }
+      this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
     }
   }
 
@@ -29,5 +37,6 @@ export class InventorySystem {
 
   clear() {
     this.items = [];
+    this.dispatchEvent({ type: 'changed' }); // ✅ now correctly typed
   }
 }

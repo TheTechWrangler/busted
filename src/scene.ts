@@ -1,6 +1,11 @@
 // File: src/scene.ts
 
 import * as THREE from 'three';
+import { PickupItem } from './entities/PickupItem';
+import { InventorySystem } from './systems/InventorySystem';
+import { InventoryItem } from './types/InventoryItems';
+import { InventoryUI } from './ui/InventoryUI'; // ✅ Added
+import { world } from './physics'; // ✅ Make sure your Cannon world is initialized here
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xaaaaaa);
@@ -39,3 +44,44 @@ dirLight.shadow.camera.left = -10;
 dirLight.shadow.camera.right = 10;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
+
+// ————————————————————————————————————————————————————————————————
+// ✅ Inventory + Pickups Setup
+// ————————————————————————————————————————————————————————————————
+export const inventory = new InventorySystem();
+new InventoryUI(inventory); // ✅ Added: Hook up Inventory UI
+
+const pickups: PickupItem[] = [];
+
+const potion: InventoryItem = {
+  id: 'potion',
+  name: 'Health Potion',
+  quantity: 1,
+  icon: 'https://i.imgur.com/3mKkLNM.png'
+};
+
+const item = new PickupItem(
+  scene,
+  world,
+  potion,
+  inventory,
+  new THREE.Vector3(3, 1, 3)
+);
+
+pickups.push(item);
+
+// ————————————————————————————————————————————————————————————————
+// ✅ E Key to Pick Up Nearby Items
+// ————————————————————————————————————————————————————————————————
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyE') {
+    pickups.forEach(p => {
+      p.tryCollect(camera.position);
+    });
+  }
+});
+
+// ————————————————————————————————————————————————————————————————
+// ✅ Call this inside your game/render loop elsewhere:
+// pickups.forEach(p => p.update());
+// ————————————————————————————————————————————————————————————————
