@@ -1,7 +1,8 @@
-// File: src/ui/InventoryUI.ts
 import { InventorySystem } from "../systems/InventorySystem";
+import { hotbar } from "../scene";
+import { InventoryItem } from "../types/InventoryItems";
 
-export class InventoryUI {
+class InventoryUI {
   private container: HTMLElement;
 
   constructor(private inventory: InventorySystem) {
@@ -24,7 +25,7 @@ export class InventoryUI {
     document.body.appendChild(this.container);
 
     // ✅ Always update UI when inventory changes
-    this.inventory.addEventListener("changed", () => {
+    this.inventory.addEventListener(() => {
       console.log("[InventoryUI] Event received: changed");
       this.update();
     });
@@ -39,14 +40,19 @@ export class InventoryUI {
 
   update() {
     const items = this.inventory.getItems();
-    console.log("[InventoryUI] Rendering items:", items);
+    const hotbarItems = hotbar.getSlots();
+    const filteredItems = items.filter(
+      invItem => !hotbarItems.some(slot => slot && slot.id === invItem.id)
+    );
+
+    console.log("[InventoryUI] Rendering items (filtered):", filteredItems);
 
     this.container.innerHTML = `
       <h3 style="text-align: center; margin: 0 0 8px 0;">Inventory</h3>
       <ul style="list-style-type: disc; padding-left: 16px; margin: 0;">
         ${
-          items.length
-            ? items
+          filteredItems.length
+            ? filteredItems
                 .map(
                   (i, idx) => `
           <li 
@@ -80,10 +86,10 @@ export class InventoryUI {
       el.addEventListener("dragstart", (e) => {
         const dragEvent = e as DragEvent;
         const target = dragEvent.target as HTMLElement;
-        const payload = {
-          id: target.dataset.id,
-          name: target.dataset.name,
-          icon: target.dataset.icon,
+        const payload: InventoryItem = {
+          id: target.dataset.id || "",
+          name: target.dataset.name || "",
+          icon: target.dataset.icon || "",
           quantity: 1,
         };
         dragEvent.dataTransfer?.setData("text/plain", JSON.stringify(payload));
@@ -91,3 +97,5 @@ export class InventoryUI {
     });
   }
 }
+
+export default InventoryUI;
