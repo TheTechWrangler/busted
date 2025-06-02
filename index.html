@@ -9,6 +9,7 @@
       margin: 0;
       overflow: hidden;
     }
+
     #blocker {
       position: absolute;
       top: 0; left: 0;
@@ -19,6 +20,7 @@
       justify-content: center;
       z-index: 10;
     }
+
     #instructions {
       color: white;
       font-family: Arial, sans-serif;
@@ -26,12 +28,18 @@
       text-align: center;
       cursor: pointer;
     }
+
     canvas {
       display: block;
     }
 
-    /* The build menu (#buildMenu) is created dynamically in adminBuildMenu.ts
-       and positioned at top-left (z-index: 1000) to float above everything. */
+    /* Hotbar slot selected style */
+    .hotbar-slot.selected {
+      border-color: yellow !important;
+      box-shadow: 0 0 10px yellow;
+    }
+
+    /* Optional: Styling for unselected hotbar slots can go here too */
   </style>
 </head>
 <body>

@@ -11,6 +11,8 @@ import { GUI } from 'dat.gui';
 import Stats from 'stats.js';
 import { controls, registerMountCallback, setBuildMode, isBuildModeEnabled } from './controls';
 import { InventoryUI } from './ui/InventoryUI';
+import { HotbarUI } from "./ui/HotbarUI";
+
 
 // ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Import Admin Build Menu functions
@@ -19,6 +21,8 @@ import { animateBuildMenu, loadSavedPlacements, show as showBuildMenu, hide as h
 
 // ✅ Use shared inventory instance from scene.ts
 const inventoryUI = new InventoryUI(inventory);
+const hotbarUI = new HotbarUI();
+
 
 const MIN_FOV = 30;
 const MAX_FOV = 100;

@@ -1,18 +1,36 @@
-// File: src/scene.ts
+import {
+  Scene,
+  Color,
+  PerspectiveCamera,
+  WebGLRenderer,
+  HemisphereLight,
+  DirectionalLight,
+  PlaneGeometry,
+  MeshStandardMaterial,
+  Mesh,
+  TextureLoader,
+  Texture,
+  MeshBasicMaterial,
+  DoubleSide,
+  LinearEncoding
+} from 'three';
 
-import * as THREE from 'three';
 import { PickupItem } from './entities/PickupItem';
 import { InventorySystem } from './systems/InventorySystem';
 import { InventoryItem } from './types/InventoryItems';
 import { world } from './physics';
+import { HotbarUI } from './ui/HotbarUI';
 
-export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xaaaaaa);
+export const scene = new Scene();
+scene.background = new Color(0xaaaaaa);
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+export const hotbar = new HotbarUI();
+
+
+// ─────────────────────────────────────────────────────────
 // Camera Setup
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export const camera = new THREE.PerspectiveCamera(
+// ─────────────────────────────────────────────────────────
+export const camera = new PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
@@ -20,10 +38,10 @@ export const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 2, 5);
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
 // Renderer Setup
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
+// ─────────────────────────────────────────────────────────
+export const renderer = new WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
@@ -34,14 +52,14 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
 // Lights
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+// ─────────────────────────────────────────────────────────
+const hemiLight = new HemisphereLight(0xffffff, 0x444444, 0.6);
 hemiLight.position.set(0, 50, 0);
 scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+const dirLight = new DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(-5, 10, -5);
 dirLight.castShadow = true;
 dirLight.shadow.camera.top = 10;
@@ -51,9 +69,9 @@ dirLight.shadow.camera.right = 10;
 dirLight.shadow.mapSize.set(1024, 1024);
 scene.add(dirLight);
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// ✅ Inventory + Pickups Setup
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// Inventory + Pickups Setup
+// ─────────────────────────────────────────────────────────
 export const inventory = new InventorySystem();
 const pickups: PickupItem[] = [];
 
@@ -69,62 +87,60 @@ const item = new PickupItem(
   world,
   potion,
   inventory,
-  new THREE.Vector3(3, 1, 3)
+  new Mesh(new PlaneGeometry(), new MeshStandardMaterial()).position.set(3, 1, 3)
 );
 
 pickups.push(item);
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// ✅ “E” Key to Collect Nearby
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// “E” Key to Collect Nearby
+// ─────────────────────────────────────────────────────────
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') {
     pickups.forEach(p => p.tryCollect(camera.position));
   }
 });
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Add a ground plane named “ground” for Admin Build Menu raycasting
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(200, 200),
-  new THREE.MeshStandardMaterial({ color: 0x556644 })
+// ─────────────────────────────────────────────────────────
+// Ground Plane
+// ─────────────────────────────────────────────────────────
+export const ground = new Mesh(
+  new PlaneGeometry(200, 200),
+  new MeshStandardMaterial({ color: 0x556644 })
 );
 ground.rotation.x = -Math.PI / 2;
-ground.name = "ground";   // Admin Build Menu will raycast against this
+ground.name = "ground";
 ground.receiveShadow = true;
 scene.add(ground);
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// (Optional) Array for billboard meshes so they can face camera if you still use them
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export const billboardMeshes: THREE.Mesh[] = [];
+// ─────────────────────────────────────────────────────────
+// Billboard Meshes Array
+// ─────────────────────────────────────────────────────────
+export const billboardMeshes: Array<InstanceType<typeof Mesh>> = [];
 
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// (Optional) Helper to scatter billboards (if needed outside build mode)
-// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// Helper to Scatter Billboards
+// ─────────────────────────────────────────────────────────
 export function scatterBranches(imagePath: string, count: number, radius: number) {
-  const loader = new THREE.TextureLoader();
+  const loader = new TextureLoader();
   const texture = loader.load(imagePath);
-  texture.encoding = THREE.sRGBEncoding;
+  texture.encoding = LinearEncoding;
 
   for (let i = 0; i < count; i++) {
-    const size = 5; // example size
-    const mat = new THREE.MeshBasicMaterial({
+    const size = 5;
+    const mat = new MeshBasicMaterial({
       map: texture,
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide
+      side: DoubleSide
     });
-    const geo = new THREE.PlaneGeometry(size, size);
-    const mesh = new THREE.Mesh(geo, mat);
+    const geo = new PlaneGeometry(size, size);
+    const mesh = new Mesh(geo, mat);
 
-    // Random position on XZ circle
     const angle = Math.random() * Math.PI * 2;
     const r = Math.random() * radius;
     mesh.position.set(Math.cos(angle) * r, 2, Math.sin(angle) * r);
 
-    // Make it face the camera initially
     mesh.lookAt(camera.position);
 
     scene.add(mesh);

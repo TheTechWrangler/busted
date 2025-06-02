@@ -46,16 +46,48 @@ export class InventoryUI {
       <ul style="list-style-type: disc; padding-left: 16px; margin: 0;">
         ${
           items.length
-            ? items.map(i => `<li>${i.name} x${i.quantity}</li>`).join("")
+            ? items
+                .map(
+                  (i, idx) => `
+          <li 
+            draggable="true"
+            data-id="${i.id}" 
+            data-name="${i.name}" 
+            data-icon="${i.icon || ''}"
+            style="cursor: grab;"
+          >
+            ${i.name} x${i.quantity}
+          </li>`
+                )
+                .join("")
             : "<li>Empty</li>"
         }
       </ul>
     `;
+
+    this.makeItemsDraggable();
   }
 
   toggle() {
     const visible = this.container.style.display === "block";
     this.container.style.display = visible ? "none" : "block";
     if (!visible) this.update();
+  }
+
+  private makeItemsDraggable() {
+    const listItems = this.container.querySelectorAll("li[draggable=true]");
+    listItems.forEach((el) => {
+      el.addEventListener("dragstart", (e) => {
+        const dragEvent = e as DragEvent;
+        const target = dragEvent.target as HTMLElement;
+        const payload = {
+          id: target.dataset.id,
+          name: target.dataset.name,
+          icon: target.dataset.icon,
+          quantity: 1,
+        };
+        dragEvent.dataTransfer?.setData("text/plain", JSON.stringify(payload));
+      });
+    });
   }
 }
