@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "sourceMap": true,
-    "types": ["three"]
+    "types": ["three"],
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["src"]
 }

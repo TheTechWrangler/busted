@@ -9,25 +9,33 @@ class InventoryUI {
     this.container = document.createElement("div");
     this.container.id = "inventory-ui";
 
+      console.log("[InventoryUI] Listening to inventory instance:", this.inventory); // 🧪 ADD THIS LINE
+
+
     // Styling
-    this.container.style.position = "absolute";
-    this.container.style.top = "200px";
-    this.container.style.right = "590px";
-    this.container.style.background = "#111";
-    this.container.style.color = "#fff";
-    this.container.style.padding = "12px 16px";
-    this.container.style.borderRadius = "8px";
-    this.container.style.display = "none";
-    this.container.style.zIndex = "1000";
-    this.container.style.fontFamily = "sans-serif";
-    this.container.style.minWidth = "180px";
+    Object.assign(this.container.style, {
+      position: "absolute",
+      top: "200px",
+      right: "590px",
+      background: "#111",
+      color: "#fff",
+      padding: "12px 16px",
+      borderRadius: "8px",
+      display: "none",
+      zIndex: "1000",
+      fontFamily: "sans-serif",
+      minWidth: "180px"
+    });
 
     document.body.appendChild(this.container);
 
     // ✅ Always update UI when inventory changes
-    this.inventory.addEventListener(() => {
-      console.log("[InventoryUI] Event received: changed");
-      this.update();
+    this.inventory.addEventListener((event: { type: string }) => {
+      if (event.type === "changed") {
+        console.log("[InventoryUI] Inventory changed.");
+        this.update(); // 🔁 Always update, even if hidden
+      }
+      
     });
 
     // Toggle UI with "I"
@@ -41,6 +49,7 @@ class InventoryUI {
   update() {
     const items = this.inventory.getItems();
     const hotbarItems = hotbar.getSlots();
+
     const filteredItems = items.filter(
       invItem => !hotbarItems.some(slot => slot && slot.id === invItem.id)
     );
@@ -54,7 +63,7 @@ class InventoryUI {
           filteredItems.length
             ? filteredItems
                 .map(
-                  (i, idx) => `
+                  (i) => `
           <li 
             draggable="true"
             data-id="${i.id}" 
@@ -77,7 +86,9 @@ class InventoryUI {
   toggle() {
     const visible = this.container.style.display === "block";
     this.container.style.display = visible ? "none" : "block";
-    if (!visible) this.update();
+    if (!visible) {
+      this.update();
+    }
   }
 
   private makeItemsDraggable() {
